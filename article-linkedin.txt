@@ -1,0 +1,22 @@
+Nouvel article dans Wonderfull .net world : TUnit, faut-il remplacer xUnit ?
+
+En mission comme en formation, une question revient régulièrement : xUnit, NUnit ou MSTest ?
+
+Depuis quelques mois, un quatrième nom revient de plus en plus : TUnit.
+
+Plutôt que de me contenter de la documentation, j'ai construit un POC : un panier e-commerce, 7 thèmes, 62 tests.
+
+Ce que j'en retiens :
+
+- les tests sont découverts à la compilation, pas par réflexion ;
+- tout est parallèle par défaut, y compris dans une même classe ;
+- les fixtures partagées tiennent en un seul attribut ;
+- Retry, DependsOn ou Matrix répondent à des besoins concrets sur les tests d'intégration.
+
+Mais xUnit v3 a réduit l'écart, et TUnit reste un projet jeune.
+
+Mon avis : un très bon candidat pour un nouveau projet, à manier avec prudence sur un existant.
+
+L'article complet est dans la newsletter 👇
+
+#dotnet #csharp #tests #TUnit #xunit

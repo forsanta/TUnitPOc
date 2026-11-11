@@ -1,0 +1,64 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+bld/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+# Test results
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.rsuser
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# MSBuild / build artifacts
+*.binlog
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Misc
+*.tmp
+*.cache
+_ReSharper*/
+*.DotSettings.user
+
+# OS files
+.DS_Store
+Thumbs.db

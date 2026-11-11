@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Article TUnit – copie LinkedIn</title>
+<style>
+  :root {
+    --bg: #f4f2ee; --paper: #fff; --text: #1d1d1f; --muted: #666;
+    --accent: #0a66c2; --code-bg: #1e1e2e; --code-text: #e4e4ef; --border: #ddd;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 80px; }
+  .help { background: #e8f1fb; border: 1px solid #b6d4f2; border-radius: 10px;
+          padding: 14px 18px; font-size: 15px; margin-bottom: 24px; }
+  .help ol { margin: 6px 0 0; padding-left: 20px; }
+  .segment { position: relative; background: var(--paper); border: 1px solid var(--border);
+             border-radius: 10px; padding: 8px 22px 14px; margin: 14px 0; }
+  .segment.done { opacity: .55; }
+  .segment.code { background: var(--code-bg); border-color: var(--code-bg); padding: 14px 18px; }
+  .segment pre { margin: 0; color: var(--code-text); overflow-x: auto;
+                 font: 14px/1.5 Consolas, "Cascadia Code", monospace; }
+  .bar { display: flex; justify-content: space-between; align-items: center;
+         font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .code .bar { color: #a0a0b8; }
+  button { font: 600 13px/1 inherit; font-family: inherit; color: #fff; background: var(--accent);
+           border: 0; border-radius: 16px; padding: 7px 14px; cursor: pointer; }
+  .segment.image { background: #fff8e6; border-color: #f0d9a0; padding: 10px 16px 16px; }
+  .segment.image img { display: block; max-width: 100%; height: auto; }
+  .oneline { width: 100%; margin-top: 10px; height: 44px; resize: none; border-radius: 6px;
+             border: 1px solid #44445a; background: #2a2a3c; color: #e4e4ef;
+             font: 13px/1.4 Consolas, monospace; padding: 6px 8px; }
+  button.ok { background: #2e7d32; }
+  button.warn { background: #b26a00; }
+  h1 { font-size: 30px; line-height: 1.25; }
+  h2 { font-size: 22px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="help">
+  <strong>Mode d'emploi</strong> (ouvre cette page dans Chrome, pas dans le panneau de l'app Claude)
+  <ol>
+    <li>Dans LinkedIn, crée l'article et colle le titre dans le champ titre.</li>
+    <li>Pour chaque bloc <strong>blanc</strong> : « Copier le texte », puis colle dans l'éditeur (titres, gras et listes sont conservés).</li>
+    <li>Pour chaque bloc <strong>sombre</strong> : « Copier le code (1 ligne) » : le code est copié sur une seule ligne, colle-le puis remets-le en forme dans l'éditeur.</li>
+  </ol>
+  Le bouton sélectionne aussi le bloc : si rien ne se colle, fais simplement Ctrl+C.<br>
+  Les blocs déjà copiés s'estompent pour que tu saches où tu en es.
+</div>
+
+<!-- Article source : le script découpe automatiquement en blocs texte / code -->
+<article id="source">
+
+<h1>TUnit : faut-il remplacer xUnit ? Retour sur un POC</h1>
+
+<p>En mission comme en formation, une question revient régulièrement :</p>
+<p>xUnit, NUnit ou MSTest ?</p>
+<p>Dans un précédent article sur la migration .NET Framework vers .NET moderne, j'expliquais que les tests sont une des préparations les plus utiles d'un projet. Sur l'une des applications, nous étions d'ailleurs passés de MSTest à xUnit.</p>
+<p>Depuis quelques mois, un quatrième nom revient pourtant de plus en plus : <strong>TUnit</strong>.</p>
+<p>Plutôt que de me contenter de la documentation, j'ai voulu le tester sur un cas concret.</p>
+
+<h2>Le POC</h2>
+<p>L'idée était simple :</p>
+<p>un petit domaine métier, et un projet de tests organisé par fonctionnalité.</p>
+<p>Le domaine est un panier e-commerce : ajout de produits, codes promo, frais de port, et un service de commande qui vérifie le stock.</p>
+<p>Côté tests :</p>
+<ul>
+  <li>TUnit 1.83 sur .NET 10 ;</li>
+  <li>7 thèmes, un dossier par thème ;</li>
+  <li>62 tests générés à partir d'une trentaine de méthodes ;</li>
+  <li>environ 1,2 seconde d'exécution.</li>
+</ul>
+<p>Voici ce que j'en retiens.</p>
+
+<h2>1. Les tests sont découverts à la compilation</h2>
+<p>C'est la principale différence technique avec xUnit.</p>
+<p>xUnit découvre les tests par réflexion au moment de l'exécution. TUnit, lui, utilise un <em>source generator</em> : les tests sont identifiés dès la compilation.</p>
+<p>Cela a plusieurs conséquences :</p>
+<ul>
+  <li>un démarrage plus rapide sur les grosses suites de tests ;</li>
+  <li>la compatibilité avec Native AOT ;</li>
+  <li>certaines erreurs remontent dès le build, par exemple un paramètre de test qui ne correspond pas aux données fournies.</li>
+</ul>
+<p>TUnit s'appuie aussi sur Microsoft.Testing.Platform. Le projet de test devient un exécutable : on peut le lancer avec dotnet test, mais aussi directement avec dotnet run.</p>
+
+<h2>2. Des assertions asynchrones et fluides</h2>
+<p>Avec xUnit, on écrit :</p>
+<pre>Assert.Equal(49m, cart.Total);</pre>
+<p>Avec TUnit :</p>
+<pre>await Assert.That(cart.Total)
+    .IsGreaterThan(40m)
+    .And.IsEqualTo(49m);</pre>
+<p>Toutes les assertions sont awaitées, et elles sont intégrées au framework. Pas besoin d'ajouter une librairie d'assertions.</p>
+<p>On peut aussi regrouper plusieurs vérifications pour obtenir tous les échecs d'un coup, plutôt que de s'arrêter au premier :</p>
+<pre>using (Assert.Multiple())
+{
+    await Assert.That(cart.Lines).Count().IsEqualTo(2);
+    await Assert.That(cart.SubTotal).IsEqualTo(119.87m);
+    await Assert.That(cart.DiscountCode).IsNull();
+}</pre>
+<p>Petite anecdote : au premier lancement, un test a échoué.</p>
+<p>TUnit avait raison. C'est moi qui avais mal calculé un total à la main : 124,96 au lieu de 125,01.</p>
+<p>Le message d'erreur affichait la valeur attendue, la valeur obtenue et l'expression exacte de l'assertion. Le diagnostic a été immédiat.</p>
+
+<h2>3. Une seule notion de test</h2>
+<p>Avec xUnit, on distingue [Fact] et [Theory].</p>
+<p>Avec TUnit, tout est [Test], avec ou sans données :</p>
+<pre>[Test]
+[Arguments(100, "WELCOME10", 90)]
+[Arguments(100, "BLACKFRIDAY", 70)]
+[Arguments(100, null, 100)]
+public async Task Discount_codes_are_applied(decimal amount, string? code, decimal expected)
+{
+    await Assert.That(DiscountCalculator.Apply(amount, code)).IsEqualTo(expected);
+}</pre>
+<p>Les équivalences sont assez directes :</p>
+<ul>
+  <li>[InlineData] devient [Arguments] ;</li>
+  <li>[MemberData] devient [MethodDataSource].</li>
+</ul>
+<p>TUnit ajoute en plus [Matrix], qui génère toutes les combinaisons de valeurs :</p>
+<pre>[Test]
+[MatrixDataSource]
+public async Task Shipping_is_never_negative_nor_above_9_euros(
+    [Matrix(0, 10, 49.99, 50)] decimal amount,
+    [Matrix(true, false)] bool express)</pre>
+<p>4 montants x 2 modes de livraison : 8 tests générés.</p>
+
+<h2>4. Un cycle de vie basé sur des attributs</h2>
+<p>C'est probablement le point où le gain est le plus visible.</p>
+<p>Avec xUnit, partager une ressource entre plusieurs classes de tests demande trois éléments : ICollectionFixture&lt;T&gt;, l'attribut [Collection], et une classe de définition de collection.</p>
+<p>Avec TUnit, un seul attribut suffit :</p>
+<pre>[ClassDataSource&lt;StockFixture&gt;(Shared = SharedType.PerTestSession)]
+public class OrderServiceTests(StockFixture fixture)</pre>
+<p>La fixture implémente IAsyncInitializer : TUnit l'initialise une seule fois, avant la première utilisation, puis la partage avec toutes les classes qui la demandent.</p>
+<p>Pour le reste du cycle de vie, on utilise des attributs sur n'importe quelle méthode :</p>
+<ul>
+  <li>[Before(Test)] / [After(Test)] ;</li>
+  <li>[Before(Class)] ;</li>
+  <li>[Before(Assembly)] ;</li>
+  <li>[Before(TestSession)].</li>
+</ul>
+<p>Plus besoin d'interfaces ou de classe de base.</p>
+
+<h2>5. Tout est parallèle par défaut</h2>
+<p>C'est un changement important.</p>
+<p>Avec xUnit, les classes de tests tournent en parallèle, mais les tests d'une même classe s'exécutent les uns après les autres.</p>
+<p>Avec TUnit, tous les tests tournent en parallèle, y compris dans une même classe.</p>
+<p>On restreint ensuite au cas par cas :</p>
+<ul>
+  <li>[NotInParallel("clé")] pour sérialiser les tests qui partagent une ressource ;</li>
+  <li>[ParallelLimiter&lt;T&gt;] pour limiter le nombre de tests simultanés, par exemple face à une API avec quota.</li>
+</ul>
+<p>Cela oblige à penser l'isolation des tests dès le départ.</p>
+
+<h2>6. Des outils absents de xUnit</h2>
+<p>TUnit propose aussi plusieurs attributs qui répondent à des besoins concrets, surtout sur des tests d'intégration :</p>
+<ul>
+  <li>[Retry(3)] relance un test instable en cas d'échec ;</li>
+  <li>[Repeat(5)] exécute un test plusieurs fois ;</li>
+  <li>[Timeout(2000)] injecte un CancellationToken annulé à l'expiration du délai ;</li>
+  <li>[DependsOn] fait attendre un test qu'un autre ait réussi.</li>
+</ul>
+<p>[DependsOn] est particulièrement intéressant pour les scénarios en plusieurs étapes :</p>
+<pre>[Test]
+[DependsOn(nameof(Step1_stock_is_provisioned))]
+public async Task Step2_reservation_decrements_stock()</pre>
+<p>Si l'étape 1 échoue, l'étape 2 est ignorée au lieu d'échouer à son tour. Le rapport montre directement l'origine du problème.</p>
+
+<h2>Les points de vigilance</h2>
+<p>Avant de migrer, il faut garder plusieurs éléments en tête.</p>
+<p><strong>xUnit v3 a réduit l'écart.</strong><br>Il tourne lui aussi sur Microsoft.Testing.Platform, propose un TestContext.Current, des fixtures d'assembly et Assert.Skip. La comparaison est plus juste face à xUnit v3 que face à xUnit v2.</p>
+<p><strong>TUnit est jeune.</strong><br>Le projet est porté principalement par un seul mainteneur, et son API a beaucoup évolué entre les versions. xUnit, lui, est le standard de fait, avec un écosystème très large.</p>
+<p><strong>Le parallélisme par défaut a un coût.</strong><br>Une suite existante qui partage un état statique ou une base de données peut devenir instable du jour au lendemain lors d'une migration.</p>
+
+<h2>Le bon outil pour le bon contexte</h2>
+<p>Après ce POC, mon avis est assez clair.</p>
+<p>Pour des tests unitaires simples, xUnit v3 reste un choix sûr.</p>
+<p>Pour des tests d'intégration plus lourds (base de données, conteneurs, scénarios enchaînés), TUnit apporte un confort appréciable : fixtures partagées en un attribut, retry, dépendances entre tests, parallélisme maîtrisé.</p>
+<p>Je le recommanderais sur un nouveau projet, avant de l'imposer sur un existant.</p>
+<p>Et surtout, comme pour une migration, le choix du framework compte moins que la présence des tests eux-mêmes.</p>
+<p>Le code du POC est disponible ici : [lien GitHub]</p>
+
+</article>
+
+<div id="out"></div>
+</div>
+
+<script>
+  // Découpe l'article en blocs : texte (copie riche) et code (copie brute)
+  const source = document.getElementById('source');
+  const out = document.getElementById('out');
+  const nodes = [...source.children];
+  source.remove();
+
+  let current = null, textIndex = 0, codeIndex = 0;
+
+  function makeSegment(kind, label) {
+    const seg = document.createElement('section');
+    seg.className = 'segment ' + kind;
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const btn = document.createElement('button');
+    btn.textContent = kind === 'code' ? 'Copier le code (1 ligne)' : 'Copier le texte';
+    bar.append(Object.assign(document.createElement('span'), { textContent: label }), btn);
+    const body = document.createElement('div');
+    seg.append(bar, body);
+    btn.addEventListener('click', () => copy(kind, body, btn, seg));
+    out.append(seg);
+    return body;
+  }
+
+  for (const node of nodes) {
+    if (node.tagName === 'PRE') {
+      makeSegment('code', 'Code ' + (++codeIndex)).append(node);
+      current = null;
+    } else {
+      if (!current) current = makeSegment('text', 'Texte ' + (++textIndex));
+      current.append(node);
+    }
+  }
+
+  function selectBlock(body) {
+    const range = document.createRange();
+    range.selectNodeContents(body);
+    const sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // Code : champ caché contenant la version sur une seule ligne, utilisé pour la copie
+  function oneLineField(body, seg) {
+    let field = seg.querySelector('textarea');
+    if (!field) {
+      field = document.createElement('textarea');
+      field.readOnly = true;
+      field.value = body.innerText.replace(/\s*\n\s*/g, ' ').trim();
+      field.className = 'oneline';
+      seg.append(field);
+    }
+    return field;
+  }
+
+  async function copy(kind, body, btn, seg) {
+    if (kind === 'code') {
+      const field = oneLineField(body, seg);
+      field.focus();
+      field.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      if (!ok) {
+        try { await navigator.clipboard.writeText(field.value); ok = true; } catch { ok = false; }
+      }
+      seg.classList.add('done');
+      btn.textContent = ok ? 'Copié ✓' : 'Sélectionné : fais Ctrl+C';
+      btn.classList.add(ok ? 'ok' : 'warn');
+      return;
+    }
+
+    let copied = false;
+    try {
+      if (kind === 'code') {
+        await navigator.clipboard.writeText(body.innerText);
+      } else {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([body.innerHTML], { type: 'text/html' }),
+          'text/plain': new Blob([body.innerText], { type: 'text/plain' })
+        })]);
+      }
+      copied = true;
+    } catch {
+      // Presse-papiers bloqué : on tente la copie classique sur la sélection
+      selectBlock(body);
+      try { copied = document.execCommand('copy'); } catch { copied = false; }
+    }
+
+    // Dans tous les cas, le bloc reste sélectionné : Ctrl+C fonctionne toujours
+    selectBlock(body);
+    seg.classList.add('done');
+    if (copied) {
+      btn.textContent = 'Copié ✓';
+      btn.classList.add('ok');
+    } else {
+      btn.textContent = 'Sélectionné : fais Ctrl+C';
+      btn.classList.add('warn');
+    }
+  }
+</script>
+</body>
+</html>
